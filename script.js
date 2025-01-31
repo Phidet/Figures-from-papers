@@ -149,6 +149,7 @@ canvas.addEventListener('mousedown', (e) => {
   
   // Check corner click
   activeRectIndex = -1;
+  draggingCorner = null;
   for (let i = rects.length - 1; i >= 0; i--) {
     const r = rects[i];
     const corners = [
@@ -284,33 +285,36 @@ function updateFloatingButton(rect) {
 
 async function cropPreserved() {
   if (!pdfDocBuffer || !pdfDoc || !currentViewport || rects.length === 0) return;
-  const { PDFDocument } = PDFLib;
+  // Import PDFName along with PDFDocument
+  const { PDFDocument, PDFName } = PDFLib;
   
   // Create a new PDF with just the current page
   const newPdf = await PDFDocument.create();
   const sourcePdf = await PDFDocument.load(pdfDocBuffer.slice(0));
   const [copiedPage] = await newPdf.copyPages(sourcePdf, [currentPage - 1]);
   newPdf.addPage(copiedPage);
-
-  // Apply crop box to the first (and only) page
+  
   const page = newPdf.getPage(0);
+  // Remove annotations (e.g., hyperlink boxes) from the page
+  page.node.set(PDFName.of('Annots'), newPdf.context.obj([]));
+  
   const rect = rects[0];
   
   const xMin = Math.min(rect.startX, rect.endX);
   const xMax = Math.max(rect.startX, rect.endX);
   const yMin = Math.min(rect.startY, rect.endY);
   const yMax = Math.max(rect.startY, rect.endY);
-
+  
   const [pdfXMin, pdfYMax] = currentViewport.convertToPdfPoint(xMin, yMin);
   const [pdfXMax, pdfYMin] = currentViewport.convertToPdfPoint(xMax, yMax);
-
+  
   page.setCropBox(
     pdfXMin,
     pdfYMin,
     pdfXMax - pdfXMin,
     pdfYMax - pdfYMin
   );
-
+  
   const cropped = await newPdf.save();
   download(new Blob([cropped], { type: 'application/pdf' }), 'crop-preserved.pdf');
 }
