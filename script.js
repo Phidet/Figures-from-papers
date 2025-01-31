@@ -19,13 +19,96 @@ let draggingCorner = null;
 let activeRectIndex = -1;
 const cornerSize = 12;
 
+const searchBar = document.querySelector('.search-bar');
+const canvasContainer = document.querySelector('.canvas-container');
+const initialContainer = document.querySelector('.initial-container');
+const uploadZone = document.getElementById('uploadZone');
+
+const pageNav = document.querySelector('.page-nav');
+const currentPageSpan = document.getElementById('currentPage');
+const totalPagesSpan = document.getElementById('totalPages');
+const pageInput = document.getElementById('pageInput');
+
+// Replace search bar click handler with upload zone handlers
+uploadZone.addEventListener('click', () => {
+    document.getElementById('pdfInput').click();
+});
+
+uploadZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadZone.classList.add('drag-over');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+    uploadZone.classList.remove('drag-over');
+});
+
+uploadZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+        handlePDFFile(file);
+    }
+});
+
 document.getElementById('pdfInput').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  const arrayBuffer = await file.arrayBuffer();
-  // Create a copy for pdf-lib to avoid the detached buffer issue.
-  pdfDocBuffer = arrayBuffer.slice(0);
-  pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
-  renderPage(currentPage);
+    if (e.target.files[0]) {
+        handlePDFFile(e.target.files[0]);
+    }
+});
+
+async function handlePDFFile(file) {
+    initialContainer.classList.add('pdf-loaded');
+    canvasContainer.classList.add('active');
+    pageNav.classList.add('active');
+    
+    const arrayBuffer = await file.arrayBuffer();
+    pdfDocBuffer = arrayBuffer.slice(0);
+    pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
+    totalPagesSpan.textContent = pdfDoc.numPages;
+    currentPage = 1;
+    pageInput.value = '1';
+    renderPage(currentPage);
+}
+
+document.querySelector('.prev').addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        pageInput.value = currentPage;
+        renderPage(currentPage);
+    }
+});
+
+document.querySelector('.next').addEventListener('click', () => {
+    if (pdfDoc && currentPage < pdfDoc.numPages) {
+        currentPage++;
+        pageInput.value = currentPage;
+        renderPage(currentPage);
+    }
+});
+
+document.querySelector('.home').addEventListener('click', () => {
+    // Clear everything and show initial container
+    initialContainer.classList.remove('pdf-loaded');
+    canvasContainer.classList.remove('active');
+    pageNav.classList.remove('active');
+    pdfDoc = null;
+    pdfDocBuffer = null;
+    currentPage = 1;
+    pageInput.value = '1';
+    rects.length = 0;
+});
+
+pageInput.addEventListener('change', () => {
+    const newPage = parseInt(pageInput.value, 10);
+    if (pdfDoc && newPage >= 1 && newPage <= pdfDoc.numPages) {
+        currentPage = newPage;
+        renderPage(currentPage);
+    } else {
+        // Reset to current page if invalid
+        pageInput.value = currentPage;
+    }
 });
 
 async function renderPage(pageNum) {
@@ -34,12 +117,17 @@ async function renderPage(pageNum) {
   
   const page = await pdfDoc.getPage(pageNum);
   const viewport = page.getViewport({ scale });
-  currentViewport = viewport; // Store the viewport for coordinate conversion
+  currentViewport = viewport;
   
+  // Set canvas size to match viewport exactly
   canvas.width = viewport.width;
   canvas.height = viewport.height;
   offScreenCanvas.width = viewport.width;
   offScreenCanvas.height = viewport.height;
+  
+  // Set display size to match internal size
+  canvas.style.width = `${viewport.width}px`;
+  canvas.style.height = `${viewport.height}px`;
   
   await page.render({
     canvasContext: offScreenCtx,
@@ -47,14 +135,20 @@ async function renderPage(pageNum) {
   }).promise;
   
   ctx.drawImage(offScreenCanvas, 0, 0);
+  pageInput.value = pageNum;
   isRendering = false;
 }
 
 canvas.addEventListener('mousedown', (e) => {
   const { offsetX, offsetY } = e;
+  // Remove floating button immediately when starting new rectangle
+  const existingButton = document.querySelector('.floating-download');
+  if (existingButton) {
+    existingButton.remove();
+  }
+  
   // Check corner click
   activeRectIndex = -1;
-  draggingCorner = null;
   for (let i = rects.length - 1; i >= 0; i--) {
     const r = rects[i];
     const corners = [
@@ -114,6 +208,7 @@ canvas.addEventListener('mousemove', (e) => {
       rect.endX = e.offsetX; rect.endY = e.offsetY;
     }
     drawAllRects();
+    updateFloatingButton(rects[activeRectIndex]); // Keep this for live updates during resize
   } else if (isDrawing && activeRectIndex >= 0) {
     rects[activeRectIndex].endX = e.offsetX;
     rects[activeRectIndex].endY = e.offsetY;
@@ -122,6 +217,9 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 canvas.addEventListener('mouseup', () => {
+  if (isDrawing && rects[0]) {
+    updateFloatingButton(rects[0]); // Only show button after releasing mouse
+  }
   isDrawing = false;
   draggingCorner = null;
   activeRectIndex = -1;
@@ -158,16 +256,46 @@ function isOverCorner(mouseX, mouseY, cornerX, cornerY) {
          Math.abs(cornerY - mouseY) < cornerSize;
 }
 
-document.getElementById('exportPreserved').addEventListener('click', cropPreserved);
+function updateFloatingButton(rect) {
+    // Remove any existing button
+    const existingButton = document.querySelector('.floating-download');
+    if (existingButton) {
+        existingButton.remove();
+    }
+
+    if (!rect) return;
+
+    const button = document.createElement('button');
+    button.className = 'floating-download';
+    
+    // Position button above the rectangle
+    const centerX = (rect.startX + rect.endX) / 2;
+    const top = Math.min(rect.startY, rect.endY) - 46; // 36px button + 10px margin
+    
+    button.style.left = `${centerX - 18}px`; // 18px is half button width
+    button.style.top = `${top}px`;
+    
+    button.addEventListener('click', cropPreserved);
+    document.querySelector('.canvas-wrapper').appendChild(button);
+}
+
+// Remove the exportPreserved button event listener since we're not using it anymore
+// document.getElementById('exportPreserved').addEventListener('click', cropPreserved);
 
 async function cropPreserved() {
   if (!pdfDocBuffer || !pdfDoc || !currentViewport || rects.length === 0) return;
   const { PDFDocument } = PDFLib;
-  const loadedPdf = await PDFDocument.load(pdfDocBuffer.slice(0));
-  const page = loadedPdf.getPage(currentPage - 1);
+  
+  // Create a new PDF with just the current page
+  const newPdf = await PDFDocument.create();
+  const sourcePdf = await PDFDocument.load(pdfDocBuffer.slice(0));
+  const [copiedPage] = await newPdf.copyPages(sourcePdf, [currentPage - 1]);
+  newPdf.addPage(copiedPage);
 
-  const rect = rects[0]; // Get the first (and only) rectangle
-  // Determine min/max of the drawn rectangle
+  // Apply crop box to the first (and only) page
+  const page = newPdf.getPage(0);
+  const rect = rects[0];
+  
   const xMin = Math.min(rect.startX, rect.endX);
   const xMax = Math.max(rect.startX, rect.endX);
   const yMin = Math.min(rect.startY, rect.endY);
@@ -183,7 +311,7 @@ async function cropPreserved() {
     pdfYMax - pdfYMin
   );
 
-  const cropped = await loadedPdf.save();
+  const cropped = await newPdf.save();
   download(new Blob([cropped], { type: 'application/pdf' }), 'crop-preserved.pdf');
 }
 

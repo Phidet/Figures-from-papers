@@ -1,18 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>PDF Region Extractor</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  </script>
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <title>Figure Extractor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 </head>
 <body>
-  <input type="file" id="pdfInput" accept="application/pdf" />
-  <button id="exportPreserved">Export Cropped PDF (Preserved)</button>
-  <canvas id="pdfCanvas"></canvas>
-  <script src="script.js"></script>
+    <div class="page-nav">
+        <button class="home"><img src="home-2.svg" alt="Home"></button>
+        <button class="prev"><img src="chevron-right.svg" alt="Previous"></button>
+        <span class="page-info">
+            Page <input type="number" id="pageInput" min="1" value="1"> of <span id="totalPages">1</span>
+        </span>
+        <button class="next"><img src="chevron-right.svg" alt="Next"></button>
+    </div>
+    <div class="initial-container">
+        <input type="text" class="search-bar" placeholder="Search by archive number...">
+        <p class="or-divider">- or -</p>
+        <div class="upload-zone" id="uploadZone">
+            <p>Drop PDF here or click to upload</p>
+        </div>
+        <input type="file" id="pdfInput" accept="application/pdf" style="display: none;">
+    </div>
+
+    <div class="canvas-container">
+        <div class="canvas-wrapper">
+            <canvas id="pdfCanvas"></canvas>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
