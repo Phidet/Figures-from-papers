@@ -14,6 +14,11 @@ const ctx = canvas.getContext('2d');
 const offScreenCanvas = document.createElement('canvas');
 const offScreenCtx = offScreenCanvas.getContext('2d');
 
+const rects = [];
+let draggingCorner = null;
+let activeRectIndex = -1;
+const cornerSize = 12;
+
 document.getElementById('pdfInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   const arrayBuffer = await file.arrayBuffer();
@@ -46,49 +51,131 @@ async function renderPage(pageNum) {
 }
 
 canvas.addEventListener('mousedown', (e) => {
+  const { offsetX, offsetY } = e;
+  // Check corner click
+  activeRectIndex = -1;
+  draggingCorner = null;
+  for (let i = rects.length - 1; i >= 0; i--) {
+    const r = rects[i];
+    const corners = [
+      { x: r.startX, y: r.startY, name: 'tl' },
+      { x: r.endX,   y: r.startY, name: 'tr' },
+      { x: r.startX, y: r.endY,   name: 'bl' },
+      { x: r.endX,   y: r.endY,   name: 'br' },
+    ];
+    for (const c of corners) {
+      if (isOverCorner(offsetX, offsetY, c.x, c.y)) {
+        draggingCorner = c.name;
+        activeRectIndex = i;
+        isDrawing = false;
+        return;
+      }
+    }
+  }
+  // If not corner, start new rect and clear existing ones
   isDrawing = true;
-  [startX, startY] = [e.offsetX, e.offsetY];
+  rects.length = 0;
+  rects.push({ startX: offsetX, startY: offsetY, endX: offsetX, endY: offsetY });
+  activeRectIndex = 0;
 });
 
 canvas.addEventListener('mousemove', (e) => {
-  if (!isDrawing) return;
-  endX = e.offsetX;
-  endY = e.offsetY;
-  drawRect(); // Redraw rectangle on move
+  const { offsetX, offsetY } = e;
+  // Update cursor based on corner hover
+  let isOverAnyCorner = false;
+  for (const r of rects) {
+    const corners = [
+      { x: r.startX, y: r.startY },
+      { x: r.endX,   y: r.startY },
+      { x: r.startX, y: r.endY   },
+      { x: r.endX,   y: r.endY   }
+    ];
+    if (corners.some(c => isOverCorner(offsetX, offsetY, c.x, c.y))) {
+      canvas.style.cursor = 'pointer';
+      isOverAnyCorner = true;
+      break;
+    }
+  }
+  if (!isOverAnyCorner) {
+    canvas.style.cursor = 'crosshair';
+  }
+
+  // Rest of mousemove handling
+  if (draggingCorner !== null && activeRectIndex >= 0) {
+    const rect = rects[activeRectIndex];
+    // Update corner
+    if (draggingCorner === 'tl') {
+      rect.startX = e.offsetX; rect.startY = e.offsetY;
+    } else if (draggingCorner === 'tr') {
+      rect.endX = e.offsetX; rect.startY = e.offsetY;
+    } else if (draggingCorner === 'bl') {
+      rect.startX = e.offsetX; rect.endY = e.offsetY;
+    } else if (draggingCorner === 'br') {
+      rect.endX = e.offsetX; rect.endY = e.offsetY;
+    }
+    drawAllRects();
+  } else if (isDrawing && activeRectIndex >= 0) {
+    rects[activeRectIndex].endX = e.offsetX;
+    rects[activeRectIndex].endY = e.offsetY;
+    drawAllRects();
+  }
 });
 
 canvas.addEventListener('mouseup', () => {
   isDrawing = false;
+  draggingCorner = null;
+  activeRectIndex = -1;
 });
 
-function drawRect() {
+function drawAllRects() {
   if (isRendering) return;
-  
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(offScreenCanvas, 0, 0);
-  ctx.strokeStyle = 'red';
-  ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+  
+  rects.forEach((r) => {
+    // Draw rectangle
+    ctx.strokeStyle = 'red';
+    ctx.strokeRect(r.startX, r.startY, r.endX - r.startX, r.endY - r.startY);
+    
+    // Draw corner circles
+    ctx.fillStyle = 'red';
+    const corners = [
+      { x: r.startX, y: r.startY },
+      { x: r.endX,   y: r.startY },
+      { x: r.startX, y: r.endY   },
+      { x: r.endX,   y: r.endY   }
+    ];
+    corners.forEach(c => {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, cornerSize/2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+}
+
+function isOverCorner(mouseX, mouseY, cornerX, cornerY) {
+  return Math.abs(cornerX - mouseX) < cornerSize && 
+         Math.abs(cornerY - mouseY) < cornerSize;
 }
 
 document.getElementById('exportPreserved').addEventListener('click', cropPreserved);
 
 async function cropPreserved() {
-  if (!pdfDocBuffer || !pdfDoc || !currentViewport) return;
-  const { PDFDocument } = PDFLib; // from pdf-lib.min.js
+  if (!pdfDocBuffer || !pdfDoc || !currentViewport || rects.length === 0) return;
+  const { PDFDocument } = PDFLib;
   const loadedPdf = await PDFDocument.load(pdfDocBuffer.slice(0));
-  const page = loadedPdf.getPage(currentPage - 1); // zero-based
+  const page = loadedPdf.getPage(currentPage - 1);
 
+  const rect = rects[0]; // Get the first (and only) rectangle
   // Determine min/max of the drawn rectangle
-  const xMin = Math.min(startX, endX);
-  const xMax = Math.max(startX, endX);
-  const yMin = Math.min(startY, endY);
-  const yMax = Math.max(startY, endY);
+  const xMin = Math.min(rect.startX, rect.endX);
+  const xMax = Math.max(rect.startX, rect.endX);
+  const yMin = Math.min(rect.startY, rect.endY);
+  const yMax = Math.max(rect.startY, rect.endY);
 
-  // Convert each corner to PDF coordinates using the unscaled viewport
   const [pdfXMin, pdfYMax] = currentViewport.convertToPdfPoint(xMin, yMin);
   const [pdfXMax, pdfYMin] = currentViewport.convertToPdfPoint(xMax, yMax);
 
-  // Apply the crop box
   page.setCropBox(
     pdfXMin,
     pdfYMin,
