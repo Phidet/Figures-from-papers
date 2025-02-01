@@ -12,18 +12,27 @@
 </head>
 <body>
     <div class="page-nav">
-        <button class="home"><img src="home-2.svg" alt="Home"></button>
-        <button class="prev"><img src="chevron-right.svg" alt="Previous"></button>
+        <button class="home" title="Go to Start Page"><img src="home-2.svg" alt="Home"></button>
+        <button class="prev" title="Previous Page"><img src="chevron-right.svg" alt="Previous"></button>
         <span class="page-info">
             Page <input type="number" id="pageInput" min="1" value="1"> of <span id="totalPages">1</span>
         </span>
-        <button class="next"><img src="chevron-right.svg" alt="Next"></button>
+        <button class="next" title="Next Page"><img src="chevron-right.svg" alt="Next"></button>
     </div>
-    <div class="initial-container">
-        <input type="text" class="search-bar" placeholder="Search by archive number...">
-        <p class="or-divider">- or -</p>
-        <div class="upload-zone" id="uploadZone">
-            <p>Drop PDF here or click to upload</p>
+    <!-- New loading indicator -->
+    <div id="loadingIndicator" style="display: none;">
+        <img src="rotate-right.svg" alt="Loading">
+    </div>
+    <div class="initial-container" id="initialContainer">
+        <!-- Added logo above the search bar -->
+        <div class="logo-text">CLIP FIGURES FROM PAPERS AS PDFS</div>
+        <div class="search-bar-container" style="position: relative;">
+            <input type="text" class="search-bar" placeholder="">
+            <!-- New custom placeholder overlay -->
+            <div class="custom-placeholder">
+                Arxiv reference or pdf link or <a href="#" id="uploadFileLink">upload file</a>
+            </div>
+            <button class="search-btn" title="Get pdf by arXiv reference, URL, or file upload"><img src="chevron-right.svg" alt="Search"></button>
         </div>
         <input type="file" id="pdfInput" accept="application/pdf" style="display: none;">
     </div>

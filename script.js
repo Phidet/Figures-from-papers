@@ -20,6 +20,28 @@ let activeRectIndex = -1;
 const cornerSize = 12;
 
 const searchBar = document.querySelector('.search-bar');
+const customPlaceholder = document.querySelector('.custom-placeholder');
+
+// Hide placeholder on focus or when input has text
+searchBar.addEventListener('focus', () => {
+    customPlaceholder.style.display = 'none';
+});
+searchBar.addEventListener('blur', () => {
+    if (searchBar.value.trim() === "") {
+        customPlaceholder.style.display = 'block';
+    }
+});
+searchBar.addEventListener('input', () => {
+    customPlaceholder.style.display = searchBar.value.trim() ? 'none' : 'block';
+});
+
+// Also, clicking the placeholder (outside the hyperlink) focuses the input
+customPlaceholder.addEventListener('click', (e) => {
+    if (e.target.id !== 'uploadFileLink') {
+        searchBar.focus();
+    }
+});
+
 const canvasContainer = document.querySelector('.canvas-container');
 const initialContainer = document.querySelector('.initial-container');
 const uploadZone = document.getElementById('uploadZone');
@@ -29,27 +51,16 @@ const currentPageSpan = document.getElementById('currentPage');
 const totalPagesSpan = document.getElementById('totalPages');
 const pageInput = document.getElementById('pageInput');
 
-// Replace search bar click handler with upload zone handlers
-uploadZone.addEventListener('click', () => {
+// Remove or comment out old uploadZone handlers
+// uploadZone.addEventListener('click', () => { document.getElementById('pdfInput').click(); });
+// uploadZone.addEventListener('dragover', ...);
+// uploadZone.addEventListener('dragleave', ...);
+// uploadZone.addEventListener('drop', ...);
+
+// New handler for the upload file link
+document.getElementById('uploadFileLink').addEventListener('click', (e) => {
+    e.preventDefault();
     document.getElementById('pdfInput').click();
-});
-
-uploadZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadZone.classList.add('drag-over');
-});
-
-uploadZone.addEventListener('dragleave', () => {
-    uploadZone.classList.remove('drag-over');
-});
-
-uploadZone.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    uploadZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
-        handlePDFFile(file);
-    }
 });
 
 document.getElementById('pdfInput').addEventListener('change', async (e) => {
@@ -111,32 +122,41 @@ pageInput.addEventListener('change', () => {
     }
 });
 
+// New helper to clear crop UI (rectangle and floating button)
+function clearCropUI() {
+    rects.length = 0;
+    const existingButton = document.querySelector('.floating-download');
+    if (existingButton) { existingButton.remove(); }
+}
+
+// Update renderPage to clear cropping UI when switching pages
 async function renderPage(pageNum) {
-  if (isRendering) return;
-  isRendering = true;
+    clearCropUI();
+    if (isRendering) return;
+    isRendering = true;
   
-  const page = await pdfDoc.getPage(pageNum);
-  const viewport = page.getViewport({ scale });
-  currentViewport = viewport;
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale });
+    currentViewport = viewport;
   
-  // Set canvas size to match viewport exactly
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  offScreenCanvas.width = viewport.width;
-  offScreenCanvas.height = viewport.height;
+    // Set canvas size to match viewport exactly
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    offScreenCanvas.width = viewport.width;
+    offScreenCanvas.height = viewport.height;
   
-  // Set display size to match internal size
-  canvas.style.width = `${viewport.width}px`;
-  canvas.style.height = `${viewport.height}px`;
+    // Set display size to match internal size
+    canvas.style.width = `${viewport.width}px`;
+    canvas.style.height = `${viewport.height}px`;
   
-  await page.render({
-    canvasContext: offScreenCtx,
-    viewport,
-  }).promise;
+    await page.render({
+      canvasContext: offScreenCtx,
+      viewport,
+    }).promise;
   
-  ctx.drawImage(offScreenCanvas, 0, 0);
-  pageInput.value = pageNum;
-  isRendering = false;
+    ctx.drawImage(offScreenCanvas, 0, 0);
+    pageInput.value = pageNum;
+    isRendering = false;
 }
 
 canvas.addEventListener('mousedown', (e) => {
@@ -219,7 +239,16 @@ canvas.addEventListener('mousemove', (e) => {
 
 canvas.addEventListener('mouseup', () => {
   if (isDrawing && rects[0]) {
-    updateFloatingButton(rects[0]); // Only show button after releasing mouse
+    // Only show button for valid rectangle dimensions
+    const rect = rects[0];
+    if (Math.abs(rect.endX - rect.startX) > 20 && Math.abs(rect.endY - rect.startY) > 20) {
+      updateFloatingButton(rect);
+    } else {
+      // If too small, remove rectangle and any floating button
+      rects.length = 0;
+      const existingButton = document.querySelector('.floating-download');
+      if (existingButton) { existingButton.remove(); }
+    }
   }
   isDrawing = false;
   draggingCorner = null;
@@ -252,6 +281,7 @@ function drawAllRects() {
   });
 }
 
+// Fix: Use mouseY correctly in isOverCorner
 function isOverCorner(mouseX, mouseY, cornerX, cornerY) {
   return Math.abs(cornerX - mouseX) < cornerSize && 
          Math.abs(cornerY - mouseY) < cornerSize;
@@ -325,4 +355,98 @@ function download(blob, filename) {
   link.href = URL.createObjectURL(blob);
   link.download = filename;
   link.click();
+}
+
+// Debounce helper to limit execution frequency
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Handle window resize for responsiveness
+window.addEventListener("resize", debounce(() => {
+    if (pdfDoc) {
+        const containerWidth = document.querySelector('.canvas-container').clientWidth;
+        // Recalculate new scale based on the original unscaled page width
+        pdfDoc.getPage(currentPage).then(page => {
+            const unscaledViewport = page.getViewport({ scale: 1 });
+            const newScale = containerWidth / unscaledViewport.width;
+            scale = newScale;
+            renderPage(currentPage);
+        });
+    }
+}, 250));
+
+// Refactored search handler for arXiv numbers / PDF URLs
+function handleSearch() {
+    const input = searchBar.value.trim();
+    // Match arXiv identifiers and URLs (with optional version)
+    const arxivRegex = /^(?:arXiv:|https?:\/\/arxiv\.org\/abs\/)?(\d{4}\.\d{5}(v\d+)?)$/i;
+    let pdfUrl = "";
+    const match = input.match(arxivRegex);
+    if (match) {
+        pdfUrl = `https://arxiv.org/pdf/${match[1]}`;
+    } else {
+        // Assume input is a direct PDF URL (from any site)
+        pdfUrl = input;
+    }
+    loadPDFfromURL(pdfUrl);
+}
+
+// Updated search event listeners to trigger file upload when the input is empty
+searchBar.addEventListener('keypress', event => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        if (searchBar.value.trim() === "") {
+            document.getElementById('pdfInput').click();
+        } else {
+            handleSearch();
+        }
+    }
+});
+
+document.querySelector('.search-btn').addEventListener('click', () => {
+    if (searchBar.value.trim() === "") {
+        document.getElementById('pdfInput').click();
+    } else {
+        handleSearch();
+    }
+});
+
+// Helper functions for loading indicator
+function showLoadingIndicator() {
+    const indicator = document.getElementById('loadingIndicator');
+    if (indicator) indicator.style.display = 'block';
+}
+function hideLoadingIndicator() {
+    const indicator = document.getElementById('loadingIndicator');
+    if (indicator) indicator.style.display = 'none';
+}
+
+// Updated loadPDFfromURL to show loading indicator during fetch
+async function loadPDFfromURL(url) {
+    showLoadingIndicator();
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Network error');
+        const arrayBuffer = await res.arrayBuffer();
+        pdfDocBuffer = arrayBuffer.slice(0);
+        pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
+        totalPagesSpan.textContent = pdfDoc.numPages;
+        currentPage = 1;
+        pageInput.value = '1';
+        // Show PDF view
+        initialContainer.classList.add('pdf-loaded');
+        canvasContainer.classList.add('active');
+        pageNav.classList.add('active');
+        renderPage(currentPage);
+    } catch (err) {
+        console.error("Failed to load PDF:", err);
+        alert("Failed to load PDF from the provided URL.");
+    } finally {
+        hideLoadingIndicator();
+    }
 }
