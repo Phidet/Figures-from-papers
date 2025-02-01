@@ -18,6 +18,7 @@ const rects = [];
 let draggingCorner = null;
 let activeRectIndex = -1;
 const cornerSize = 12;
+let autoTightenOffset = 2.5; // configurable offset in pixels
 
 const searchBar = document.querySelector('.search-bar');
 const customPlaceholder = document.querySelector('.custom-placeholder');
@@ -218,6 +219,8 @@ canvas.addEventListener('mousemove', (e) => {
   // Rest of mousemove handling
   if (draggingCorner !== null && activeRectIndex >= 0) {
     const rect = rects[activeRectIndex];
+    // Reset autoTightened flag when resizing
+    rect.autoTightened = false;
     // Update corner
     if (draggingCorner === 'tl') {
       rect.startX = e.offsetX; rect.startY = e.offsetY;
@@ -233,6 +236,8 @@ canvas.addEventListener('mousemove', (e) => {
   } else if (isDrawing && activeRectIndex >= 0) {
     rects[activeRectIndex].endX = e.offsetX;
     rects[activeRectIndex].endY = e.offsetY;
+    // Ensure the new rectangle starts without auto-tightening applied
+    rects[activeRectIndex].autoTightened = false;
     drawAllRects();
   }
 });
@@ -262,11 +267,11 @@ function drawAllRects() {
   
   rects.forEach((r) => {
     // Draw rectangle
-    ctx.strokeStyle = 'red';
+    ctx.strokeStyle = 'blue';
     ctx.strokeRect(r.startX, r.startY, r.endX - r.startX, r.endY - r.startY);
     
     // Draw corner circles
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = 'blue';
     const corners = [
       { x: r.startX, y: r.startY },
       { x: r.endX,   y: r.startY },
@@ -287,36 +292,122 @@ function isOverCorner(mouseX, mouseY, cornerX, cornerY) {
          Math.abs(cornerY - mouseY) < cornerSize;
 }
 
-function updateFloatingButton(rect) {
-    // Remove any existing button
-    const existingButton = document.querySelector('.floating-download');
-    if (existingButton) {
-        existingButton.remove();
-    }
+let currentRotation = 0; // New global rotation state
 
+function updateFloatingButton(rect) {
+    // Remove any existing container
+    const existingIsland = document.querySelector('.floating-island');
+    if (existingIsland) {
+        existingIsland.remove();
+    }
     if (!rect) return;
 
-    const button = document.createElement('button');
-    button.className = 'floating-download';
+    // Create container
+    const island = document.createElement('div');
+    island.className = 'floating-island';
     
-    // Position button above the rectangle
-    const centerX = (rect.startX + rect.endX) / 2;
-    const top = Math.min(rect.startY, rect.endY) - 46; // 36px button + 10px margin
-    
-    button.style.left = `${centerX - 18}px`; // 18px is half button width
-    button.style.top = `${top}px`;
-    
-    button.addEventListener('click', cropPreserved);
-    document.querySelector('.canvas-wrapper').appendChild(button);
+    // Create crop button
+    const cropBtn = document.createElement('button');
+    cropBtn.style.backgroundImage = "url('cut.svg')";
+    cropBtn.addEventListener('click', cropPreserved);
+
+    // Create tighten button
+    const tightenBtn = document.createElement('button');
+    tightenBtn.style.backgroundImage = "url('fullscreen.svg')";
+    tightenBtn.addEventListener('click', () => {
+        autoTightenRect(rect);
+        drawAllRects();
+        updateFloatingButton(rect);
+    });
+
+    // Create navigation/rotation button
+    const navBtn = document.createElement('button');
+    // Instead of setting the background image on the button, add a child for the icon
+    const navIcon = document.createElement('span');
+    navIcon.style.backgroundImage = "url('navigation.svg')";
+    navIcon.style.backgroundSize = "20px";
+    navIcon.style.display = "inline-block";
+    navIcon.style.width = "20px";
+    navIcon.style.height = "20px";
+    navIcon.style.transition = "transform 0.2s ease";
+    navIcon.style.transform = `rotate(${currentRotation}deg)`;
+    navIcon.style.pointerEvents = "none"; // ensure click passes to parent
+    navBtn.title = "Rotate cropping orientation";
+    navBtn.addEventListener('click', () => {
+        currentRotation += 90; // accumulate rotation
+        navIcon.style.transform = `rotate(${currentRotation}deg)`;
+    });
+    navBtn.appendChild(navIcon);
+
+    island.appendChild(cropBtn);
+    island.appendChild(tightenBtn);
+    island.appendChild(navBtn);
+
+    // Position the container
+    const left = Math.min(rect.startX, rect.endX);
+    const centerX = left + Math.abs(rect.startX - rect.endX) / 2;
+    const top = Math.min(rect.startY, rect.endY)
+    island.style.left = `${centerX}px`;
+    island.style.top = `${top}px`;
+    island.style.transform = 'translateX(50%) translateY(-120%)';
+
+    document.querySelector('.canvas-wrapper').appendChild(island);
 }
 
-// Remove the exportPreserved button event listener since we're not using it anymore
-// document.getElementById('exportPreserved').addEventListener('click', cropPreserved);
+// New auto-tighten function with offset
+function autoTightenRect(rect) {
+    // Prevent further auto-tightening if already applied
+    if (rect.autoTightened) return;
+
+    const xMin = Math.min(rect.startX, rect.endX);
+    const yMin = Math.min(rect.startY, rect.endY);
+    const xMax = Math.max(rect.startX, rect.endX);
+    const yMax = Math.max(rect.startY, rect.endY);
+    const width = xMax - xMin;
+    const height = yMax - yMin;
+    if (width < 1 || height < 1) return;
+    
+    // Get image data from offScreenCanvas
+    const imageData = offScreenCtx.getImageData(xMin, yMin, width, height).data;
+    let minX = width, minY = height, maxX = 0, maxY = 0;
+    
+    // Simple threshold for non-white detection
+    for (let i = 0; i < imageData.length; i += 4) {
+        const r = imageData[i], g = imageData[i+1], b = imageData[i+2];
+        const alpha = imageData[i+3];
+        const pixelIndex = i / 4;
+        const px = pixelIndex % width;
+        const py = Math.floor(pixelIndex / width);
+        if (alpha > 0 && (r < 235 || g < 235 || b < 235)) {
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+        }
+    }
+    // Only update if a non-white region was found
+    if (maxX > 0 || maxY > 0) {
+        const candidateStartX = xMin + minX;
+        const candidateEndX   = xMin + maxX;
+        const candidateStartY = yMin + minY;
+        const candidateEndY   = yMin + maxY;
+
+        const newStartX = (candidateStartX > xMin) ? Math.max(xMin, candidateStartX - autoTightenOffset) : candidateStartX;
+        const newEndX   = (candidateEndX   < xMax) ? Math.min(xMax, candidateEndX + autoTightenOffset)   : candidateEndX;
+        const newStartY = (candidateStartY > yMin) ? Math.max(yMin, candidateStartY - autoTightenOffset) : candidateStartY;
+        const newEndY   = (candidateEndY   < yMax) ? Math.min(yMax, candidateEndY + autoTightenOffset)   : candidateEndY;
+
+        rect.startX = newStartX;
+        rect.startY = newStartY;
+        rect.endX   = newEndX;
+        rect.endY   = newEndY;
+        rect.autoTightened = true;
+    }
+}
 
 async function cropPreserved() {
   if (!pdfDocBuffer || !pdfDoc || !currentViewport || rects.length === 0) return;
-  // Import PDFName along with PDFDocument
-  const { PDFDocument, PDFName } = PDFLib;
+  const { PDFDocument, PDFName, degrees } = PDFLib; // include degrees helper
   
   // Create a new PDF with just the current page
   const newPdf = await PDFDocument.create();
@@ -325,11 +416,10 @@ async function cropPreserved() {
   newPdf.addPage(copiedPage);
   
   const page = newPdf.getPage(0);
-  // Remove annotations (e.g., hyperlink boxes) from the page
+  // Remove annotations from the page
   page.node.set(PDFName.of('Annots'), newPdf.context.obj([]));
   
   const rect = rects[0];
-  
   const xMin = Math.min(rect.startX, rect.endX);
   const xMax = Math.max(rect.startX, rect.endX);
   const yMin = Math.min(rect.startY, rect.endY);
@@ -344,7 +434,10 @@ async function cropPreserved() {
     pdfXMax - pdfXMin,
     pdfYMax - pdfYMin
   );
-  
+
+  // Apply rotation according to cumulative currentRotation (modulo 360 for PDF)
+  page.setRotation(degrees(currentRotation % 360));
+
   const cropped = await newPdf.save();
   download(new Blob([cropped], { type: 'application/pdf' }), 'crop-preserved.pdf');
 }
@@ -450,3 +543,12 @@ async function loadPDFfromURL(url) {
         hideLoadingIndicator();
     }
 }
+
+const DEV_MODE = true; // Add development flag
+
+// Add trigger on page load for development mode
+window.addEventListener('load', () => {
+    if (DEV_MODE) {
+        loadPDFfromURL('https://arxiv.org/pdf/2403.07266');
+    }
+});
