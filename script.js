@@ -161,38 +161,38 @@ async function renderPage(pageNum) {
 }
 
 canvas.addEventListener('mousedown', (e) => {
-  const { offsetX, offsetY } = e;
-  // Remove floating button immediately when starting new rectangle
-  const existingButton = document.querySelector('.floating-download');
-  if (existingButton) {
-    existingButton.remove();
-  }
-  
-  // Check corner click
-  activeRectIndex = -1;
-  draggingCorner = null;
-  for (let i = rects.length - 1; i >= 0; i--) {
-    const r = rects[i];
-    const corners = [
-      { x: r.startX, y: r.startY, name: 'tl' },
-      { x: r.endX,   y: r.startY, name: 'tr' },
-      { x: r.startX, y: r.endY,   name: 'bl' },
-      { x: r.endX,   y: r.endY,   name: 'br' },
-    ];
-    for (const c of corners) {
-      if (isOverCorner(offsetX, offsetY, c.x, c.y)) {
-        draggingCorner = c.name;
-        activeRectIndex = i;
-        isDrawing = false;
-        return;
-      }
+    const { offsetX, offsetY } = e;
+    // Remove floating button and island immediately when starting new rectangle
+    const existingIsland = document.querySelector('.floating-island');
+    if (existingIsland) { existingIsland.remove(); }
+    
+    // Check corner click
+    activeRectIndex = -1;
+    draggingCorner = null;
+    for (let i = rects.length - 1; i >= 0; i--) {
+        const r = rects[i];
+        const corners = [
+            { x: r.startX, y: r.startY, name: 'tl' },
+            { x: r.endX,   y: r.startY, name: 'tr' },
+            { x: r.startX, y: r.endY,   name: 'bl' },
+            { x: r.endX,   y: r.endY,   name: 'br' },
+        ];
+        for (const c of corners) {
+            if (isOverCorner(offsetX, offsetY, c.x, c.y)) {
+                draggingCorner = c.name;
+                activeRectIndex = i;
+                isDrawing = false;
+                return;
+            }
+        }
     }
-  }
-  // If not corner, start new rect and clear existing ones
-  isDrawing = true;
-  rects.length = 0;
-  rects.push({ startX: offsetX, startY: offsetY, endX: offsetX, endY: offsetY });
-  activeRectIndex = 0;
+    // If not corner, start new rect and clear existing ones
+    isDrawing = true;
+    // Delete existing rects
+    rects.length = 0;
+    drawAllRects();
+    rects.push({ startX: offsetX, startY: offsetY, endX: offsetX, endY: offsetY });
+    activeRectIndex = 0;
 });
 
 canvas.addEventListener('mousemove', (e) => {
