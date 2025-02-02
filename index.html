@@ -4,7 +4,6 @@
     <title>Figure Extractor</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.mjs"></script> -->
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
@@ -21,18 +20,15 @@
         <!-- <button class="zoom-in" title="Zoom In"><img src="plus.svg" alt="Zoom in"></button> -->
         <button class="next" title="Next page"><img src="chevron-right.svg" alt="Next"></button>
     </div>
-    <!-- New loading indicator -->
     <div id="loadingIndicator" style="display: none;">
         <img src="rotate-right.svg" alt="Loading">
     </div>
     <div class="initial-container" id="initialContainer">
-        <!-- Added logo above the search bar -->
         <div class="logo-text">EXPORT FIGURES FROM PAPERS AS PDFS</div>
         <div class="search-bar-container" style="position: relative;">
             <input type="text" class="search-bar" placeholder="">
-            <!-- New custom placeholder overlay -->
             <div class="custom-placeholder">
-                Arxiv reference or pdf link or <a href="#" id="uploadFileLink">upload file</a>
+                arXiv reference or pdf link or <a href="#" id="uploadFileLink">upload file</a>
             </div>
             <button class="search-btn" title="Get pdf by arXiv reference, URL, or file upload"><img src="chevron-right.svg" alt="Search"></button>
         </div>

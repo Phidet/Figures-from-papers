@@ -53,13 +53,7 @@ const currentPageSpan = document.getElementById('currentPage');
 const totalPagesSpan = document.getElementById('totalPages');
 const pageInput = document.getElementById('pageInput');
 
-// Remove or comment out old uploadZone handlers
-// uploadZone.addEventListener('click', () => { document.getElementById('pdfInput').click(); });
-// uploadZone.addEventListener('dragover', ...);
-// uploadZone.addEventListener('dragleave', ...);
-// uploadZone.addEventListener('drop', ...);
-
-// New handler for the upload file link
+// Handler for the upload file link
 document.getElementById('uploadFileLink').addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('pdfInput').click();
@@ -124,7 +118,7 @@ pageInput.addEventListener('change', () => {
     }
 });
 
-// New helper to clear crop UI (rectangle and floating button)
+// Helper to clear crop UI (rectangle and floating button)
 function clearCropUI() {
     // Clear existing rectangles and floating download button
     rects.length = 0;
@@ -167,10 +161,6 @@ async function renderPage(pageNum) {
 
 canvas.addEventListener('mousedown', (e) => {
     const { offsetX, offsetY } = e;
-    // Remove floating button and island immediately when starting new rectangle
-    const existingIsland = document.querySelector('.floating-island');
-    if (existingIsland) { existingIsland.remove(); }
-    
     // Check corner click
     activeRectIndex = -1;
     draggingCorner = null;
@@ -193,6 +183,9 @@ canvas.addEventListener('mousedown', (e) => {
     }
     // If not corner, start new rect and clear existing ones
     isDrawing = true;
+    // Remove floating button and island immediately when starting new rectangle
+    const existingIsland = document.querySelector('.floating-island');
+    if (existingIsland) { existingIsland.remove(); }
     // Delete existing rects
     rects.length = 0;
     drawAllRects();
@@ -236,15 +229,14 @@ canvas.addEventListener('mousemove', (e) => {
     } else if (draggingCorner === 'br') {
       rect.endX = e.offsetX; rect.endY = e.offsetY;
     }
-    drawAllRects();
-    updateFloatingButton(rects[activeRectIndex]); // Keep this for live updates during resize
+    updateFloatingButton(rects[activeRectIndex]);
   } else if (isDrawing && activeRectIndex >= 0) {
     rects[activeRectIndex].endX = e.offsetX;
     rects[activeRectIndex].endY = e.offsetY;
     // Ensure the new rectangle starts without auto-tightening applied
     rects[activeRectIndex].autoTightened = false;
-    drawAllRects();
   }
+  drawAllRects();
 });
 
 canvas.addEventListener('mouseup', () => {
@@ -291,7 +283,6 @@ function drawAllRects() {
   });
 }
 
-// Fix: Use mouseY correctly in isOverCorner
 function isOverCorner(mouseX, mouseY, cornerX, cornerY) {
   return Math.abs(cornerX - mouseX) < cornerSize && 
          Math.abs(cornerY - mouseY) < cornerSize;
@@ -329,7 +320,6 @@ function updateFloatingButton(rect) {
 
     // Create navigation/rotation button
     const navBtn = document.createElement('button');
-    // Instead of setting the background image on the button, add a child for the icon
     const navIcon = document.createElement('span');
     navIcon.style.backgroundImage = "url('navigation.svg')";
     navIcon.style.backgroundSize = "20px";
@@ -362,7 +352,7 @@ function updateFloatingButton(rect) {
     document.querySelector('.canvas-wrapper').appendChild(island);
 }
 
-// New auto-tighten function with offset
+// Auto-tighten function with offset
 function autoTightenRect(rect) {
     // Prevent further auto-tightening if already applied
     if (rect.autoTightened) return;
@@ -415,7 +405,7 @@ function autoTightenRect(rect) {
 
 async function cropPreserved() {
   if (!pdfDocBuffer || !pdfDoc || !currentViewport || rects.length === 0) return;
-  const { PDFDocument, PDFName, degrees } = PDFLib; // include degrees helper
+  const { PDFDocument, PDFName, degrees } = PDFLib;
   
   // Create a new PDF with just the current page
   const newPdf = await PDFDocument.create();
@@ -467,7 +457,7 @@ function debounce(func, wait) {
     };
 }
 
-// New function to recalculate scale without debounce
+// Function to recalculate scale based on container width
 function recalcScale() {
     if (pdfDoc) {
         const containerWidth = document.querySelector('.canvas-container').clientWidth;
@@ -503,7 +493,7 @@ function handleSearch() {
     loadPDFfromURL(pdfUrl);
 }
 
-// Updated search event listeners to trigger file upload when the input is empty
+// Handle search on Enter key press
 searchBar.addEventListener('keypress', event => {
     if (event.key === 'Enter') {
         event.preventDefault();
@@ -533,7 +523,6 @@ function hideLoadingIndicator() {
     if (indicator) indicator.style.display = 'none';
 }
 
-// Updated loadPDFfromURL to show loading indicator during fetch
 async function loadPDFfromURL(url) {
     showLoadingIndicator();
     try {
@@ -545,11 +534,9 @@ async function loadPDFfromURL(url) {
         totalPagesSpan.textContent = pdfDoc.numPages;
         currentPage = 1;
         pageInput.value = '1';
-        // Show PDF view
         initialContainer.classList.add('pdf-loaded');
         canvasContainer.classList.add('active');
         pageNav.classList.add('active');
-        // Ensure PDF container is sized correctly upon loading the PDF
         recalcScale();
         renderPage(currentPage);
     } catch (err) {
@@ -560,11 +547,10 @@ async function loadPDFfromURL(url) {
     }
 }
 
-const DEV_MODE = false; // Add development flag
+const DEV_MODE = true;
 
-// Add trigger on page load for development mode
+// Trigger on page load for development mode
 window.addEventListener('load', () => {
-    // Optionally, call recalcScale manually here
     if (DEV_MODE) {
         loadPDFfromURL('https://arxiv.org/pdf/2403.07266');
     }
