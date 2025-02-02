@@ -1,6 +1,7 @@
 let pdfDoc = null;
 let currentPage = 1;
 let scale = 1.5; // Adjust for resolution/quality
+let scaleDiff = 0; // New global for container width difference
 let isDrawing = false;
 let isRendering = false;
 let startX, startY, endX, endY;
@@ -125,9 +126,13 @@ pageInput.addEventListener('change', () => {
 
 // New helper to clear crop UI (rectangle and floating button)
 function clearCropUI() {
+    // Clear existing rectangles and floating download button
     rects.length = 0;
     const existingButton = document.querySelector('.floating-download');
     if (existingButton) { existingButton.remove(); }
+    // Also remove floating island container if present
+    const existingIsland = document.querySelector('.floating-island');
+    if (existingIsland) { existingIsland.remove(); }
 }
 
 // Update renderPage to clear cropping UI when switching pages
@@ -309,11 +314,13 @@ function updateFloatingButton(rect) {
     // Create crop button
     const cropBtn = document.createElement('button');
     cropBtn.style.backgroundImage = "url('cut.svg')";
+    cropBtn.title = "Crop and download";
     cropBtn.addEventListener('click', cropPreserved);
 
     // Create tighten button
     const tightenBtn = document.createElement('button');
     tightenBtn.style.backgroundImage = "url('fullscreen.svg')";
+    tightenBtn.title = "Auto-tighten crop";
     tightenBtn.addEventListener('click', () => {
         autoTightenRect(rect);
         drawAllRects();
@@ -345,7 +352,8 @@ function updateFloatingButton(rect) {
 
     // Position the container
     const left = Math.min(rect.startX, rect.endX);
-    const centerX = left + Math.abs(rect.startX - rect.endX) / 2;
+    /* scaleDiff / 2 is the canvas offset on one side and then half of that to center island */
+    const centerX = left + Math.abs(rect.startX - rect.endX) / 2 - scaleDiff / 4;
     const top = Math.min(rect.startY, rect.endY)
     island.style.left = `${centerX}px`;
     island.style.top = `${top}px`;
@@ -459,18 +467,24 @@ function debounce(func, wait) {
     };
 }
 
-// Handle window resize for responsiveness
-window.addEventListener("resize", debounce(() => {
+// New function to recalculate scale without debounce
+function recalcScale() {
     if (pdfDoc) {
         const containerWidth = document.querySelector('.canvas-container').clientWidth;
-        // Recalculate new scale based on the original unscaled page width
         pdfDoc.getPage(currentPage).then(page => {
             const unscaledViewport = page.getViewport({ scale: 1 });
             const newScale = containerWidth / unscaledViewport.width;
+            scaleDiff = containerWidth - unscaledViewport.width;
             scale = newScale;
+            console.log("Recalculated scale:", scale);
             renderPage(currentPage);
         });
     }
+}
+
+// Handle window resize for responsiveness using debounce
+window.addEventListener("resize", debounce(() => {
+    recalcScale();
 }, 250));
 
 // Refactored search handler for arXiv numbers / PDF URLs
@@ -535,6 +549,8 @@ async function loadPDFfromURL(url) {
         initialContainer.classList.add('pdf-loaded');
         canvasContainer.classList.add('active');
         pageNav.classList.add('active');
+        // Ensure PDF container is sized correctly upon loading the PDF
+        recalcScale();
         renderPage(currentPage);
     } catch (err) {
         console.error("Failed to load PDF:", err);
@@ -548,6 +564,7 @@ const DEV_MODE = true; // Add development flag
 
 // Add trigger on page load for development mode
 window.addEventListener('load', () => {
+    // Optionally, call recalcScale manually here
     if (DEV_MODE) {
         loadPDFfromURL('https://arxiv.org/pdf/2403.07266');
     }

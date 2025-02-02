@@ -1,0 +1,288 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.initial-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+    transition: margin 0.3s ease;
+}
+
+.initial-container.pdf-loaded {
+    margin-top: 2rem;
+    display: none;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2rem;
+    font-family: monospace;
+    font-size: 1.8rem;
+    color: #333;
+}
+
+.search-bar-container {
+    position: relative;
+    width: 600px;
+    max-width: 90%;
+    margin: 0 auto;
+    position: relative; /* ensure container is positioned for overlay */
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.search-bar {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    padding-right: 3rem; /* room for the button */
+    font-size: 1.1rem;
+    border: 2px solid #eee;
+    border-radius: 12px;
+    outline: none;
+    /* transition: border-color 0.2s; */
+    box-sizing: border-box;
+}
+
+.search-bar:focus {
+    outline: none;
+}
+
+.custom-placeholder {
+    position: absolute;
+    left: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    pointer-events: none;
+    font-size: 1.1rem;
+    user-select: none;
+}
+.custom-placeholder a {
+    color: #007bff;
+    text-decoration: underline;
+    pointer-events: auto;
+}
+
+.search-btn {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.search-btn img {
+    width: 24px;
+    height: 24px;
+}
+
+.canvas-container {
+    margin-top: 4rem;
+    width: 90%;
+    max-width: 1200px;
+    opacity: 0;
+    height: 0;
+    overflow: visible; /* Allow shadows and other elements to be fully visible */
+    transition: opacity 0.3s ease;
+}
+
+.canvas-container.active {
+    opacity: 1;
+    height: auto;
+}
+
+.canvas-wrapper {
+    margin: 1rem auto; /* Center the contents horizontally */
+    display: flex;
+    justify-content: center; /* Center the canvas inside the wrapper */
+    position: relative;
+    overflow: visible;
+}
+
+#pdfCanvas {
+    /* Remove width: 100% */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    display: block; /* Prevent inline spacing issues */
+}
+
+.floating-download {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    background: white url('cut.svg') center/20px no-repeat;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    font-size: 0; /* Hide any text content */
+    color: #666;
+    padding: 0; /* Add this to prevent any default padding */
+}
+
+.floating-download:hover {
+    /* transform: translateY(2px); */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.floating-island {
+    position: absolute;
+    display: flex;
+    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    padding: 4px 8px;
+    z-index: 1000;
+}
+.floating-island button {
+    width: 36px;
+    height: 36px;
+    background: center/20px no-repeat;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0; /* hide text */
+    color: #666;
+    padding: 0;
+}
+.floating-island button:hover {
+    /* transform: translateY(1px); */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.page-nav {
+    position: fixed;
+    top: 0.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    padding: 0.5rem 1rem;
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    z-index: 1000;
+}
+
+.page-nav.active {
+    display: flex;
+}
+
+.page-nav button {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.page-nav button:hover {
+    /* Updated to mimic floating island hover effect */
+    /* transform: translateY(1px); */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.page-nav button img {
+    width: 20px;
+    height: 20px;
+}
+
+.page-nav button.prev img {
+    transform: rotate(180deg);
+}
+
+
+.page-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.page-info input {
+    width: 40px;
+    padding: 2px 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9rem;
+    /* Remove spinners */
+    -moz-appearance: textfield;
+}
+
+.page-info input:focus {
+    outline: none;
+}
+
+.page-info input::-webkit-outer-spin-button,
+.page-info input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.page-nav .home img {
+    width: 20px;
+    height: 20px;
+    opacity: 0.6;
+}
+
+.page-nav .home:hover img {
+    opacity: 0.8;
+}
+
+#loadingIndicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2000;
+}
+#loadingIndicator img {
+    width: 36px;
+    height: 36px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .canvas-container {
+        width: 98%;
+    }
+    .search-bar {
+        width: 90%;
+    }
+}

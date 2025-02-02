@@ -4,7 +4,7 @@
     <title>Figure Extractor</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.mjs"></script> -->
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
@@ -12,12 +12,14 @@
 </head>
 <body>
     <div class="page-nav">
-        <button class="home" title="Go to Start Page"><img src="home-2.svg" alt="Home"></button>
-        <button class="prev" title="Previous Page"><img src="chevron-right.svg" alt="Previous"></button>
+        <button class="home" title="Go home"><img src="home-2.svg" alt="Home"></button>
+        <button class="prev" title="Previous page"><img src="chevron-right.svg" alt="Previous"></button>
+        <!-- <button class="zoom-out" title="Zoom Out"><img src="minus.svg" alt="Zoom out"></button> -->
         <span class="page-info">
             Page <input type="number" id="pageInput" min="1" value="1"> of <span id="totalPages">1</span>
         </span>
-        <button class="next" title="Next Page"><img src="chevron-right.svg" alt="Next"></button>
+        <!-- <button class="zoom-in" title="Zoom In"><img src="plus.svg" alt="Zoom in"></button> -->
+        <button class="next" title="Next page"><img src="chevron-right.svg" alt="Next"></button>
     </div>
     <!-- New loading indicator -->
     <div id="loadingIndicator" style="display: none;">
