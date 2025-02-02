@@ -125,7 +125,7 @@ body {
     position: absolute;
     width: 36px;
     height: 36px;
-    background: white url('cut.svg') center/20px no-repeat;
+    background: white url('download.svg') center/20px no-repeat;
     border: none;
     border-radius: 50%;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
