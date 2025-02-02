@@ -344,7 +344,7 @@ body {
     align-items: center;
     padding: 0.4rem;
     /* border-bottom: 2px solid #c5c5c5; */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 .figure-header button {
@@ -370,8 +370,8 @@ body {
     height: auto;
     display: block;
     margin: 0 auto;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding-top: 0.1rem;
+    /* padding-bottom: 0.5rem; */
 }
 /* ...existing code... */
 
