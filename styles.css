@@ -92,18 +92,18 @@ body {
 }
 
 .canvas-container {
-    margin-top: 4rem;
+    display: none;  /* Hide container to avoid extra scrolling in the initial view */
     width: 90%;
     max-width: 1200px;
-    opacity: 0;
-    height: 0;
-    overflow: visible; /* Allow shadows and other elements to be fully visible */
-    transition: opacity 0.3s ease;
+    /* ...existing styles removed for default state... */
 }
 
 .canvas-container.active {
+    display: block;
+    margin-top: 4rem;
     opacity: 1;
     height: auto;
+    transition: opacity 0.3s ease;
 }
 
 .canvas-wrapper {

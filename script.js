@@ -560,7 +560,7 @@ async function loadPDFfromURL(url) {
     }
 }
 
-const DEV_MODE = true; // Add development flag
+const DEV_MODE = false; // Add development flag
 
 // Add trigger on page load for development mode
 window.addEventListener('load', () => {
