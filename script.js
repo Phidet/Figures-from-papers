@@ -77,6 +77,7 @@ async function handlePDFFile(file) {
     currentPage = 1;
     pageInput.value = '1';
     renderPage(currentPage);
+    showInstructionsOverlay(); // show overlay after the PDF is displayed
 }
 
 document.querySelector('.prev').addEventListener('click', () => {
@@ -96,6 +97,7 @@ document.querySelector('.next').addEventListener('click', () => {
 });
 
 document.querySelector('.home').addEventListener('click', () => {
+    removeInstructionsOverlay(); // remove overlay when leaving PDF view
     // Clear everything and show initial container
     initialContainer.classList.remove('pdf-loaded');
     canvasContainer.classList.remove('active');
@@ -131,6 +133,7 @@ function clearCropUI() {
 
 // Update renderPage to clear cropping UI when switching pages
 async function renderPage(pageNum) {
+    removeInstructionsOverlay(); // remove overlay upon page change
     clearCropUI();
     if (isRendering) return;
     isRendering = true;
@@ -160,6 +163,7 @@ async function renderPage(pageNum) {
 }
 
 canvas.addEventListener('mousedown', (e) => {
+    removeInstructionsOverlay();
     const { offsetX, offsetY } = e;
     // Check corner click
     activeRectIndex = -1;
@@ -538,7 +542,8 @@ async function loadPDFfromURL(url) {
         canvasContainer.classList.add('active');
         pageNav.classList.add('active');
         recalcScale();
-        renderPage(currentPage);
+        await renderPage(currentPage);
+        showInstructionsOverlay(); // show overlay once PDF is displayed
     } catch (err) {
         console.error("Failed to load PDF:", err);
         alert("Failed to load PDF from the provided URL.");
@@ -547,7 +552,7 @@ async function loadPDFfromURL(url) {
     }
 }
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 // Trigger on page load for development mode
 window.addEventListener('load', () => {
@@ -555,3 +560,30 @@ window.addEventListener('load', () => {
         loadPDFfromURL('https://arxiv.org/pdf/2403.07266');
     }
 });
+
+// Updated: show instructions overlay centered on the screen
+function showInstructionsOverlay() {
+    if (!document.getElementById('instructionOverlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'instructionOverlay';
+        overlay.textContent = 'Click and drag to draw a rectangle around a figure';
+        // Center overlay on screen
+        overlay.style.position = 'fixed'; // changed from 'absolute' to 'fixed'
+        overlay.style.top = '50%';
+        overlay.style.left = '50%';
+        overlay.style.transform = 'translate(-50%, -50%)';
+        overlay.style.padding = '1rem 2rem';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        overlay.style.color = 'white';
+        overlay.style.borderRadius = '8px';
+        overlay.style.fontSize = '1rem';
+        overlay.style.zIndex = '1000';
+        document.body.appendChild(overlay); // append to body so that it centers on the screen
+    }
+}
+
+// Remove overlay if it exists
+function removeInstructionsOverlay() {
+    const overlay = document.getElementById('instructionOverlay');
+    if (overlay) overlay.remove();
+}
