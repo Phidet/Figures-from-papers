@@ -8,6 +8,8 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-untar@2.0.0/build/dist/untar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
 </head>
 <body>
     <div class="page-nav">
@@ -33,6 +35,11 @@
             <button class="search-btn" title="Get pdf by arXiv reference, URL, or file upload"><img src="chevron-right.svg" alt="Search"></button>
         </div>
         <input type="file" id="pdfInput" accept="application/pdf" style="display: none;">
+    </div>
+
+    <div id="figureListContainer" style="display:none;">
+        <h2>Extracted Figures</h2>
+        <div id="figureList"></div>
     </div>
 
     <div class="canvas-container">

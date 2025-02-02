@@ -482,19 +482,80 @@ window.addEventListener("resize", debounce(() => {
 }, 250));
 
 // Refactored search handler for arXiv numbers / PDF URLs
-function handleSearch() {
-    const input = searchBar.value.trim();
-    // Match arXiv identifiers and URLs (with optional version)
-    const arxivRegex = /^(?:arXiv:|https?:\/\/arxiv\.org\/abs\/)?(\d{4}\.\d{5}(v\d+)?)$/i;
-    let pdfUrl = "";
-    const match = input.match(arxivRegex);
-    if (match) {
-        pdfUrl = `https://arxiv.org/pdf/${match[1]}`;
-    } else {
-        // Assume input is a direct PDF URL (from any site)
-        pdfUrl = input;
+async function fetchAndShowArxivFigures(arxivId) {
+  showLoadingIndicator();
+  const tarUrl = `https://arxiv.org/src/${arxivId}`;
+  try {
+    const extractedFiles = await fetchAndUntar(tarUrl);
+    const figureList = document.getElementById('figureList');
+    figureList.innerHTML = ''; // Clear old content
+
+    for (const file of extractedFiles) {
+      const lowerName = file.name.toLowerCase();
+      // Show only typical figure file types
+      if (/\.(pdf|png|jpe?g)$/.test(lowerName)) {
+        const item = document.createElement('div');
+        item.className = 'figure-item';
+
+        const header = document.createElement('div');
+        header.className = 'figure-header';
+        const downloadBtn = document.createElement('button');
+        downloadBtn.title = 'Download figure';
+        downloadBtn.addEventListener('click', () => {
+          const blob = new Blob([file.buffer]);
+          download(blob, file.name);
+        });
+        header.appendChild(downloadBtn);
+        item.appendChild(header);
+
+        if (lowerName.endsWith('.pdf')) {
+          // Create PDF preview
+          const pdfDoc = await pdfjsLib.getDocument({ data: file.buffer }).promise;
+          const page = await pdfDoc.getPage(1);
+          const viewport = page.getViewport({ scale: 1 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const context = canvas.getContext('2d');
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          item.appendChild(canvas);
+        } else {
+          const blob = new Blob([file.buffer]);
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.alt = file.name;
+          item.appendChild(img);
+        }
+        figureList.appendChild(item);
+      }
     }
+
+    document.getElementById('figureListContainer').style.display = 'block';
+    // Hide PDF UI
+    document.querySelector('.canvas-container').style.display = 'none';
+    document.querySelector('.page-nav').style.display = 'none';
+    document.getElementById('initialContainer').style.display = 'none';
+  } catch (err) {
+    console.error("Failed to untar arXiv source:", err);
+    alert("Failed to untar arXiv source.");
+  } finally {
+    hideLoadingIndicator();
+  }
+}
+
+function handleSearch() {
+  const input = searchBar.value.trim();
+  const arxivRegex = /^(?:arXiv:|https?:\/\/arxiv\.org\/abs\/)?(\d{4}\.\d{4,5}(v\d+)?)$/i;
+  const match = input.match(arxivRegex);
+  if (match) {
+    const arxivId = match[1];
+    fetchAndShowArxivFigures(arxivId);
+  } else {
+    // Assume input is a direct PDF URL
+    let pdfUrl = input;
     loadPDFfromURL(pdfUrl);
+  }
 }
 
 // Handle search on Enter key press
@@ -586,4 +647,51 @@ function showInstructionsOverlay() {
 function removeInstructionsOverlay() {
     const overlay = document.getElementById('instructionOverlay');
     if (overlay) overlay.remove();
+}
+
+let tarBuffer = null;
+let extractedFiles = [];
+
+async function fetchAndUntar(tarUrl) {
+  try {
+    console.log(`Fetching tar file from: ${tarUrl}`);
+    const response = await fetch(tarUrl);
+    if (!response.ok) {
+      throw new Error(`Network response was not ok: ${response.statusText}`);
+    }
+    const buffer = await response.arrayBuffer();
+    console.log(`Tar file fetched, size: ${buffer.byteLength} bytes`);
+    if (buffer.byteLength === 0) {
+      throw new Error('Fetched tar file is empty.');
+    }
+    console.log('Starting decompression process...');
+    
+    // Decompress the tar.gz file
+    const decompressedBuffer = pako.ungzip(new Uint8Array(buffer)).buffer;
+    console.log(`Decompression completed, size: ${decompressedBuffer.byteLength} bytes`);
+    
+    console.log('Starting untar process...');
+    const extractedFiles = await untar(decompressedBuffer);
+    console.log('Untar process completed.');
+    
+    // Process and decode file names
+    extractedFiles.forEach(file => {
+      if (typeof file.name !== 'string') {
+        file.name = new TextDecoder('utf-8').decode(file.name);
+      }
+      console.log('Extracted file:', file.name);
+    });
+    console.log(`Total extracted files: ${extractedFiles.length}`);
+    
+    // Count and log figure files based on extension
+    const figureFiles = extractedFiles.filter(file =>
+      /\.(pdf|png|jpe?g)$/i.test(file.name)
+    );
+    console.log(`Figure files count: ${figureFiles.length}`);
+    figureFiles.forEach(file => console.log('Figure file:', file.name));
+    
+    return extractedFiles;
+  } catch (error) {
+    console.error('Error fetching or untarring file:', error);
+  }
 }
