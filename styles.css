@@ -8,6 +8,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
+/* Initial state and animation for the landing page container */
 .initial-container.active {
     display: flex;
     flex-direction: column;
@@ -32,6 +33,7 @@ body {
     color: #333;
 }
 
+/* Search bar with custom placeholder overlay */
 .search-bar-container {
     position: relative;
     width: 600px;
@@ -50,7 +52,6 @@ body {
     border: 2px solid #eee;
     border-radius: 12px;
     outline: none;
-    /* transition: border-color 0.2s; */
     box-sizing: border-box;
 }
 
@@ -94,6 +95,7 @@ body {
     height: 24px;
 }
 
+/* Canvas container for PDF display */
 .canvas-container {
     display: none;
 }
@@ -108,6 +110,7 @@ body {
     max-width: 1200px;
 }
 
+/* Main PDF canvas wrapper with floating controls */
 .canvas-wrapper {
     margin: 0rem auto 1rem auto; /* Center the contents horizontally */
     display: flex;
@@ -117,10 +120,9 @@ body {
 }
 
 #pdfCanvas {
-    /* Remove width: 100% */
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    display: block; /* Prevent inline spacing issues */
+    display: block;
 }
 
 .floating-download {
@@ -139,14 +141,14 @@ body {
     z-index: 1000;
     font-size: 0; /* Hide any text content */
     color: #666;
-    padding: 0; /* Add this to prevent any default padding */
+    padding: 0;
 }
 
 .floating-download:hover {
-    /* transform: translateY(2px); */
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* Floating controls for PDF interactions */
 .floating-island {
     position: absolute;
     display: flex;
@@ -173,7 +175,6 @@ body {
     padding: 0;
 }
 .floating-island button:hover {
-    /* transform: translateY(1px); */
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -197,6 +198,7 @@ body {
     display: none;
 }
 
+/* Navigation controls for PDF viewing */
 .page-nav.active {
     position: fixed;
     top: 0.8rem;
@@ -225,8 +227,6 @@ body {
 }
 
 .page-nav button:hover {
-    /* Updated to mimic floating island hover effect */
-    /* transform: translateY(1px); */
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -272,6 +272,7 @@ body {
     outline: none;
 }
 
+/* Hide number input spinners across browsers */
 .page-info input::-webkit-outer-spin-button,
 .page-info input::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -288,6 +289,7 @@ body {
     opacity: 0.8;
 }
 
+/* Loading indicator with spinning animation */
 #loadingIndicator {
     position: fixed;
     top: 60%;
@@ -309,6 +311,7 @@ body {
     display: none;
 }
 
+/* Figure list display container */
 #figureListContainer.active {
     display: block;
     max-width: 800px;
@@ -355,8 +358,6 @@ body {
     overflow: hidden;
     text-align: center;
     background: white;
-
-    /* padding: 1rem; */
     position: relative; /* Ensure relative positioning for the button */
 }
 
@@ -365,7 +366,6 @@ body {
     justify-content: flex-end; /* Right align the button */
     align-items: center;
     padding: 0.4rem;
-    /* border-bottom: 2px solid #c5c5c5; */
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
@@ -393,10 +393,9 @@ body {
     display: block;
     margin: 0 auto;
     padding-top: 0.1rem;
-    /* padding-bottom: 0.5rem; */
 }
-/* ...existing code... */
 
+/* Mobile responsive adjustments */
 @media (max-width: 768px) {
     .canvas-container {
         width: 98%;
