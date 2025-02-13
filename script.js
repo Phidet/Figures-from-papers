@@ -6,6 +6,7 @@ let isDrawing = false;
 let isRendering = false;
 let startX, startY, endX, endY;
 let pdfDocBuffer = null;
+let pdfUrl = null;
 
 // Keep reference to the latest viewport
 let currentViewport = null;
@@ -22,23 +23,27 @@ const cornerSize = 12;
 let autoTightenOffset = 2.5; // configurable offset in pixels
 
 const searchBar = document.querySelector('.search-bar');
-const customPlaceholder = document.querySelector('.custom-placeholder');
+const customSearchPlaceholder = document.querySelector('.custom-search-placeholder');
 
 // Hide placeholder on focus or when input has text
 searchBar.addEventListener('focus', () => {
-    customPlaceholder.style.display = 'none';
+    customSearchPlaceholder.classList.add('hidden');
 });
 searchBar.addEventListener('blur', () => {
     if (searchBar.value.trim() === "") {
-        customPlaceholder.style.display = 'block';
+        customSearchPlaceholder.classList.remove('hidden');
     }
 });
 searchBar.addEventListener('input', () => {
-    customPlaceholder.style.display = searchBar.value.trim() ? 'none' : 'block';
+    if (searchBar.value.trim() === "") {
+        customSearchPlaceholder.classList.remove('hidden');
+    } else {
+        customSearchPlaceholder.classList.add('hidden');
+    }
 });
 
 // Also, clicking the placeholder (outside the hyperlink) focuses the input
-customPlaceholder.addEventListener('click', (e) => {
+customSearchPlaceholder.addEventListener('click', (e) => {
     if (e.target.id !== 'uploadFileLink') {
         searchBar.focus();
     }
@@ -46,9 +51,12 @@ customPlaceholder.addEventListener('click', (e) => {
 
 const canvasContainer = document.querySelector('.canvas-container');
 const initialContainer = document.querySelector('.initial-container');
-const uploadZone = document.getElementById('uploadZone');
-
+initialContainer.classList.add('active');
 const pageNav = document.querySelector('.page-nav');
+const pdfControls = document.querySelector('.pdf-controls');
+const toCropBtn = document.querySelector('#to-crop');
+const figureListContainer = document.getElementById('figureListContainer');
+
 const currentPageSpan = document.getElementById('currentPage');
 const totalPagesSpan = document.getElementById('totalPages');
 const pageInput = document.getElementById('pageInput');
@@ -66,9 +74,11 @@ document.getElementById('pdfInput').addEventListener('change', async (e) => {
 });
 
 async function handlePDFFile(file) {
-    initialContainer.classList.add('pdf-loaded');
+    initialContainer.classList.remove('active');
     canvasContainer.classList.add('active');
     pageNav.classList.add('active');
+    pdfControls.classList.add('active');
+    toCropBtn.classList.remove('active');
     
     const arrayBuffer = await file.arrayBuffer();
     pdfDocBuffer = arrayBuffer.slice(0);
@@ -80,7 +90,7 @@ async function handlePDFFile(file) {
     showInstructionsOverlay(); // show overlay after the PDF is displayed
 }
 
-document.querySelector('.prev').addEventListener('click', () => {
+document.querySelector('#prev').addEventListener('click', () => {
     if (currentPage > 1) {
         currentPage--;
         pageInput.value = currentPage;
@@ -88,7 +98,7 @@ document.querySelector('.prev').addEventListener('click', () => {
     }
 });
 
-document.querySelector('.next').addEventListener('click', () => {
+document.querySelector('#next').addEventListener('click', () => {
     if (pdfDoc && currentPage < pdfDoc.numPages) {
         currentPage++;
         pageInput.value = currentPage;
@@ -96,17 +106,24 @@ document.querySelector('.next').addEventListener('click', () => {
     }
 });
 
-document.querySelector('.home').addEventListener('click', () => {
+document.querySelector('#home').addEventListener('click', () => {
     removeInstructionsOverlay(); // remove overlay when leaving PDF view
-    // Clear everything and show initial container
-    initialContainer.classList.remove('pdf-loaded');
+    // Clear states and restore initial view
+    initialContainer.classList.add('active');
     canvasContainer.classList.remove('active');
+    figureListContainer.classList.remove('active');
+    // Hide the entire navbar
     pageNav.classList.remove('active');
+    pdfControls.classList.remove('active');
     pdfDoc = null;
     pdfDocBuffer = null;
     currentPage = 1;
     pageInput.value = '1';
     rects.length = 0;
+    searchBar.value = "";
+    customSearchPlaceholder.classList.remove('hidden');
+    pdfUrl = null;
+
 });
 
 pageInput.addEventListener('change', () => {
@@ -308,7 +325,7 @@ function updateFloatingButton(rect) {
     
     // Create crop button
     const cropBtn = document.createElement('button');
-    cropBtn.style.backgroundImage = "url('cut.svg')";
+    cropBtn.style.backgroundImage = "url('download.svg')";
     cropBtn.title = "Crop and download";
     cropBtn.addEventListener('click', cropPreserved);
 
@@ -333,7 +350,7 @@ function updateFloatingButton(rect) {
     navIcon.style.transition = "transform 0.2s ease";
     navIcon.style.transform = `rotate(${currentRotation}deg)`;
     navIcon.style.pointerEvents = "none"; // ensure click passes to parent
-    navBtn.title = "Rotate cropping orientation";
+    navBtn.title = "Set cropped orientation";
     navBtn.addEventListener('click', () => {
         currentRotation += 90; // accumulate rotation
         navIcon.style.transform = `rotate(${currentRotation}deg)`;
@@ -446,6 +463,8 @@ async function cropPreserved() {
 
 // Helper for file download
 function download(blob, filename) {
+  console.log("Downloading:", filename);
+  console.log("Blob size:", blob.size);
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = filename;
@@ -501,10 +520,17 @@ async function fetchAndShowArxivFigures(arxivId) {
         header.className = 'figure-header';
         const downloadBtn = document.createElement('button');
         downloadBtn.title = 'Download figure';
+        
+        // Create a copy of the buffer for this file
+        const fileBuffer = file.buffer.slice(0);
+        console.log("file buffer size 0: ", fileBuffer.byteLength);
+        
         downloadBtn.addEventListener('click', () => {
-          const blob = new Blob([file.buffer]);
+          console.log("file buffer size: ", fileBuffer.byteLength);
+          const blob = new Blob([fileBuffer]);
           download(blob, file.name);
         });
+        
         header.appendChild(downloadBtn);
         item.appendChild(header);
 
@@ -531,11 +557,14 @@ async function fetchAndShowArxivFigures(arxivId) {
       }
     }
 
-    document.getElementById('figureListContainer').style.display = 'block';
-    // Hide PDF UI
-    document.querySelector('.canvas-container').style.display = 'none';
-    document.querySelector('.page-nav').style.display = 'none';
-    document.getElementById('initialContainer').style.display = 'none';
+    figureListContainer.classList.add('active');
+    // For file view, show nav with home and crop button
+    pageNav.classList.add('active');
+    pdfControls.classList.remove('active');
+    toCropBtn.classList.add('active');
+    // Hide PDF UI and initial view via class toggling:
+    canvasContainer.classList.remove('active');
+    initialContainer.classList.remove('active');
   } catch (err) {
     console.error("Failed to untar arXiv source:", err);
     alert("Failed to untar arXiv source.");
@@ -546,14 +575,17 @@ async function fetchAndShowArxivFigures(arxivId) {
 
 function handleSearch() {
   const input = searchBar.value.trim();
-  const arxivRegex = /^(?:arXiv:|https?:\/\/arxiv\.org\/abs\/)?(\d{4}\.\d{4,5}(v\d+)?)$/i;
+  const arxivRegex = /^(?:arXiv:|https?:\/\/arxiv\.org\/(?:abs|pdf)\/)?(\d{4}\.\d{4,5}(v\d+)?)$/i;
   const match = input.match(arxivRegex);
   if (match) {
+    console.log("Matched arXiv ID:", match[1]);
     const arxivId = match[1];
     fetchAndShowArxivFigures(arxivId);
+    pdfUrl = `https://arxiv.org/pdf/${arxivId}`;
   } else {
     // Assume input is a direct PDF URL
-    let pdfUrl = input;
+    console.log("Assuming input is a non arxiv direct PDF URL:", input);
+    pdfUrl = input;
     loadPDFfromURL(pdfUrl);
   }
 }
@@ -588,6 +620,7 @@ function hideLoadingIndicator() {
     if (indicator) indicator.style.display = 'none';
 }
 
+// In loadPDFfromURL: show pdf view with full navigation
 async function loadPDFfromURL(url) {
     showLoadingIndicator();
     try {
@@ -599,12 +632,15 @@ async function loadPDFfromURL(url) {
         totalPagesSpan.textContent = pdfDoc.numPages;
         currentPage = 1;
         pageInput.value = '1';
-        initialContainer.classList.add('pdf-loaded');
+        initialContainer.classList.remove('active');
         canvasContainer.classList.add('active');
+        // Set nav to PDF mode
         pageNav.classList.add('active');
+        pdfControls.classList.add('active');
+        toCropBtn.classList.remove('active');
         recalcScale();
         await renderPage(currentPage);
-        showInstructionsOverlay(); // show overlay once PDF is displayed
+        showInstructionsOverlay();
     } catch (err) {
         console.error("Failed to load PDF:", err);
         alert("Failed to load PDF from the provided URL.");
@@ -613,14 +649,25 @@ async function loadPDFfromURL(url) {
     }
 }
 
-const DEV_MODE = false;
-
-// Trigger on page load for development mode
-window.addEventListener('load', () => {
-    if (DEV_MODE) {
-        loadPDFfromURL('https://arxiv.org/pdf/2403.07266');
+// Add event listener for "to-crop" button to switch into manual cropping (pdf view) mode
+toCropBtn.addEventListener('click', () => {
+    // Hide file view
+    figureListContainer.classList.remove('active');
+    console.log("Switching to manual cropping mode for PDF:", pdfUrl);
+    if (pdfUrl) {
+      loadPDFfromURL(pdfUrl);
     }
 });
+
+const DEV_MODE = true;
+
+// // Trigger on page load for development mode
+// window.addEventListener('load', () => {
+//     if (DEV_MODE) {
+//       searchBar.value = 'https://arxiv.org/pdf/2403.07266';
+//       handleSearch();
+//     }
+// });
 
 // Updated: show instructions overlay centered on the screen
 function showInstructionsOverlay() {

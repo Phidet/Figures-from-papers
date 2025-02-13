@@ -13,32 +13,33 @@
 </head>
 <body>
     <div class="page-nav">
-        <button class="home" title="Go home"><img src="home-2.svg" alt="Home"></button>
-        <button class="prev" title="Previous page"><img src="chevron-right.svg" alt="Previous"></button>
-        <!-- <button class="zoom-out" title="Zoom Out"><img src="minus.svg" alt="Zoom out"></button> -->
-        <span class="page-info">
-            Page <input type="number" id="pageInput" min="1" value="1"> of <span id="totalPages">1</span>
-        </span>
-        <!-- <button class="zoom-in" title="Zoom In"><img src="plus.svg" alt="Zoom in"></button> -->
-        <button class="next" title="Next page"><img src="chevron-right.svg" alt="Next"></button>
+        <button id="home" title="Go home"><img src="home-2.svg" alt="Home"></button>
+        <button id="to-crop" title="Manual cropping mode"><img src="cut.svg" alt="Crop"></button>
+        <div class="pdf-controls">
+            <button id="prev" title="Previous page"><img src="chevron-right.svg" alt="Previous"></button>
+            <span class="page-info">
+                Page <input type="number" id="pageInput" min="1" value="1"> of <span id="totalPages">1</span>
+            </span>
+            <button id="next" title="Next page"><img src="chevron-right.svg" alt="Next"></button>
+        </div>
     </div>
     <div id="loadingIndicator" style="display: none;">
         <img src="rotate-right.svg" alt="Loading">
     </div>
+    
     <div class="initial-container" id="initialContainer">
         <div class="logo-text">EXPORT FIGURES FROM PAPERS AS PDFS</div>
         <div class="search-bar-container" style="position: relative;">
             <input type="text" class="search-bar" placeholder="">
-            <div class="custom-placeholder">
-                arXiv reference or pdf link or <a href="#" id="uploadFileLink">upload file</a>
+            <div class="custom-search-placeholder">
+                arXiv url/id (recommended) or pdf link or <a href="#" id="uploadFileLink">upload file</a>
             </div>
             <button class="search-btn" title="Get pdf by arXiv reference, URL, or file upload"><img src="chevron-right.svg" alt="Search"></button>
         </div>
         <input type="file" id="pdfInput" accept="application/pdf" style="display: none;">
     </div>
 
-    <div id="figureListContainer" style="display:none;">
-        <h2>Extracted Figures</h2>
+    <div id="figureListContainer">
         <div id="figureList"></div>
     </div>
 

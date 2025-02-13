@@ -1,25 +1,24 @@
 body {
     margin: 0;
     padding: 0;
+    padding-top: 4rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-.initial-container {
+.initial-container.active {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: calc(100vh - 10rem);
     text-align: center;
     transition: margin 0.3s ease;
 }
 
-.initial-container.pdf-loaded {
-    margin-top: 2rem;
+.initial-container {
     display: none;
 }
 
@@ -59,7 +58,11 @@ body {
     outline: none;
 }
 
-.custom-placeholder {
+.custom-search-placeholder.hidden {
+    display: none;
+}
+
+.custom-search-placeholder {
     position: absolute;
     left: 1.5rem;
     top: 50%;
@@ -69,7 +72,7 @@ body {
     font-size: 1.1rem;
     user-select: none;
 }
-.custom-placeholder a {
+.custom-search-placeholder a {
     color: #007bff;
     text-decoration: underline;
     pointer-events: auto;
@@ -92,22 +95,21 @@ body {
 }
 
 .canvas-container {
-    display: none;  /* Hide container to avoid extra scrolling in the initial view */
-    width: 90%;
-    max-width: 1200px;
-    /* ...existing styles removed for default state... */
+    display: none;
 }
 
 .canvas-container.active {
     display: block;
-    margin-top: 4rem;
+    margin-top: 1rem;
     opacity: 1;
     height: auto;
     transition: opacity 0.3s ease;
+    width: 90%;
+    max-width: 1200px;
 }
 
 .canvas-wrapper {
-    margin: 1rem auto; /* Center the contents horizontally */
+    margin: 0rem auto 1rem auto; /* Center the contents horizontally */
     display: flex;
     justify-content: center; /* Center the canvas inside the wrapper */
     position: relative;
@@ -175,7 +177,27 @@ body {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
+.pdf-controls {
+    display: none;
+}
+
+.pdf-controls.active {
+    display: flex;
+}
+
+#to-crop {
+    display: none;
+}
+
+#to-crop.active {
+    display: flex;
+}
+
 .page-nav {
+    display: none;
+}
+
+.page-nav.active {
     position: fixed;
     top: 0.8rem;
     left: 50%;
@@ -184,14 +206,10 @@ body {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     padding: 0.5rem 1rem;
-    display: none;
+    display: flex;
     align-items: center;
     gap: 0.5rem;
     z-index: 1000;
-}
-
-.page-nav.active {
-    display: flex;
 }
 
 .page-nav button {
@@ -217,10 +235,19 @@ body {
     height: 20px;
 }
 
-.page-nav button.prev img {
+#prev img {
     transform: rotate(180deg);
 }
 
+#prev.pdf-controls,
+#next.pdf-controls {
+    display: none;
+}
+
+#prev.pdf-controls.active,
+#next.pdf-controls.active {
+    display: flex;
+}
 
 .page-info {
     display: flex;
@@ -251,19 +278,19 @@ body {
     margin: 0;
 }
 
-.page-nav .home img {
+#home img {
     width: 20px;
     height: 20px;
     opacity: 0.6;
 }
 
-.page-nav .home:hover img {
+#home:hover img {
     opacity: 0.8;
 }
 
 #loadingIndicator {
     position: fixed;
-    top: 50%;
+    top: 60%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 2000;
@@ -278,25 +305,20 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* ...existing code... */
 #figureListContainer {
+    display: none;
+}
+
+#figureListContainer.active {
+    display: block;
     max-width: 800px;
     overflow-y: auto;
     position: relative; /* Ensure relative positioning for the button */
 }
 
-#figureListContainer h2 {
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
 #figureListHeader {
     display: flex;
     align-items: center;
-}
-
-#figureListHeader h2 {
-    margin: 0;
 }
 
 #figureListHeader button {
@@ -322,7 +344,7 @@ body {
     flex-direction: column;
     gap: 2rem;
     align-items: center;
-    padding: 1rem;
+    margin: 1rem;
 }
 .figure-item {
     width: 100%;
